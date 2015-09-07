@@ -1,12 +1,16 @@
 package com.example.android.popularmovies;
 
+import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
+import android.net.ConnectivityManager;
+import android.net.NetworkInfo;
 import android.net.Uri;
 import android.os.AsyncTask;
+import android.os.Bundle;
+import android.os.Parcelable;
 import android.preference.PreferenceManager;
 import android.support.v4.app.Fragment;
-import android.os.Bundle;
 import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
@@ -51,6 +55,11 @@ public class MainActivityFragment extends Fragment {
         View rootView =  inflater.inflate(R.layout.fragment_main, container, false);
 
         movieList = new ArrayList<>();
+
+        if (savedInstanceState != null) {
+            movieList = (List<Movie>) savedInstanceState.get("MOVIE_LIST");
+        }
+
         mMoviesAdapter = new MovieAdapter(getActivity(), movieList);
         myGridView = (GridView) rootView.findViewById(R.id.gridview);
         myGridView.setAdapter(mMoviesAdapter);
@@ -60,12 +69,7 @@ public class MainActivityFragment extends Fragment {
             public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
                 Movie movie = (Movie) myGridView.getItemAtPosition(position);
                 Intent intent = new Intent(getActivity(), MovieDetailActivity.class);
-                intent.putExtra("id", movie.getId());
-                intent.putExtra("posterPath", movie.getPosterPath());
-                intent.putExtra("title", movie.getTitle());
-                intent.putExtra("releaseDate", movie.getReleaseDate());
-                intent.putExtra("overview", movie.getOverview());
-                intent.putExtra("voteAverage", movie.getVoteAverage());
+                intent.putExtra("movie", movie);
                 startActivity(intent);
             }
         });
@@ -73,21 +77,44 @@ public class MainActivityFragment extends Fragment {
         return rootView;
     }
 
+    /**
+     * Updates the movie list launching an GetMovieListTask asynchronous task.
+     */
     private void updateMovieList() {
         GetMovieListTask weatherTask = new GetMovieListTask();
 
         SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(getActivity());
-        String sortBy = prefs.getString(getString(R.string.pref_sort_by_key),
-                getString(R.string.pref_sort_by_default));
+        String sortBy = prefs.getString(getString(R.string.pref_sort_by_key), getString(R.string.pref_sort_by_default));
 
         weatherTask.execute(sortBy);
+    }
+
+    /**
+     * Checks if the device has connectivity.
+     *
+     * @return TRUE if the device has connectivity, FALSE otherwise.
+     */
+    public boolean isOnline() {
+        ConnectivityManager connMgr = (ConnectivityManager) getActivity().getSystemService(Context.CONNECTIVITY_SERVICE);
+        NetworkInfo networkInfo = connMgr.getActiveNetworkInfo();
+        return (networkInfo != null && networkInfo.isConnected());
     }
 
     @Override
     public void onStart() {
         super.onStart();
-        updateMovieList();
+        // If we have network access we update the movie list.
+        if (isOnline()) {
+            updateMovieList();
+        }
     }
+
+    @Override
+    public void onSaveInstanceState(Bundle outState) {
+        super.onSaveInstanceState(outState);
+        outState.putParcelableArrayList("MOVIE_LIST", (ArrayList<? extends Parcelable>) movieList);
+    }
+
 
     /**
      * The asynctask that will fetch the data from de TheMovieDB.com

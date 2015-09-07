@@ -39,7 +39,6 @@ public class MovieAdapter extends ArrayAdapter<Movie> {
         // Gets the Movie object from the ArrayAdapter at the appropriate position
         Movie movie = getItem(position);
 
-        // Adapters recycle views to AdapterViews.
         // If this is a new View object we're getting, then inflate the layout.
         // If not, this view already has the layout inflated from a previous call to getView,
         // and we modify the View widgets as usual.
@@ -48,8 +47,13 @@ public class MovieAdapter extends ArrayAdapter<Movie> {
         }
 
         ImageView poster = (ImageView) convertView.findViewById(R.id.poster);
+
+        // We load the movie's poster from TMDB.org. If there is an error loading the poster
+        // a fake poster is shown.
         Picasso.with(getContext())
                 .load(posterBaseUrl + movie.getPosterPath())
+                .placeholder(R.drawable.poster_placeholder)
+                .error(R.drawable.poster_placeholder_error)
                 .into(poster);
 
         return convertView;
